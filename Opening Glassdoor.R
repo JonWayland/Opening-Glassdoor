@@ -675,3 +675,27 @@ forPrediction %>%
   arrange(SalaryEstimate) %>% 
   head(5) %>%
   knitr::kable()
+
+###########################
+### Additional Analysis ###
+###########################
+
+# Linear Model
+fit <- lm(salaryFormula, data = data)
+
+summary(fit)
+
+df <- data %>% filter(!is.na(Estimated_Salary))
+
+df$Pred <- predict(fit,newdata=df)
+
+df %>% 
+  mutate(MachineLearning = case_when(MachineLearning == 1 ~ "Yes", TRUE ~ "No")) %>%
+  mutate(`Machine Learning` = as.factor(MachineLearning)) %>%
+  ggplot(aes(Estimated_Salary, Pred, color = `Machine Learning`))+
+  geom_point(size=2) +
+  xlab("Glassdoor Estimated Salary")+
+  ylab("Linear Model Estimate")+
+  ggtitle("Is Machine Learning Mentioned in the Job Description?")+
+  theme_bw()+
+  theme(plot.title = element_text(hjust = 0.5))
