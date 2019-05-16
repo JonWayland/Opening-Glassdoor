@@ -1,3 +1,8 @@
+#########################################
+### Data Science Job Posts Web-Scrape ###
+#########################################
+# Written by Jon Wayland
+
 Location_Codes <- c(
   "1152990", # Pittsburgh
   "1152672", # Philadelphia
@@ -58,10 +63,172 @@ LocationDF <- data.frame(Location_Code = Location_Codes, City = c(
   "Kansas City","Atlanta","Oakland","St. Louis","Arlington","Orlando","Tampa","Houston",
   "Colorado Springs","Virginia Beach"))
 
+#################################
+### Defining Helper Functions ###
+#################################
+
 # Pull substrings from the right side of a string
 substrRight <- function(x, n){
   substr(x, nchar(x)-n+1, nchar(x))
 }
+
+# To produce the url for a search on 'data scientist' for a specific location
+urlByLocation <- function(location_code){
+  paste0("https://www.glassdoor.com/Job/jobs.htm?suggestCount=0&suggestChosen=false&clickSource=searchBtn&typedKeyword=data+scientist&sc.keyword=data+scientist&locT=C&locId=",
+         location_code,
+         "&jobType=")
+}
+
+# Defining DataFrame
+DSdata <- data.frame(
+  URL = as.character(),
+  Description = as.character(),
+  Job_Title = as.character(),
+  Company_Rating = as.character(),
+  Company_Name = as.character(),
+  Company_Location = as.character(),
+  Estimated_Salary = as.character(),
+  Location_Code = as.character()
+)
+
+##########################################################################################################################################
+### Pulling All Data - NOTE: THIS PART CAN BE SKIPPED AND THE DATA CAN BE READ DIRECTLY FROM MY GITHUB (THE DATA IS FROM JANUARY 2019) ###
+##########################################################################################################################################
+
+for(j in 1:length(Location_Codes)){
+  
+  print(paste("----Step 1 for location ", Location_Codes[j], "(",j,")")) #*******************************************************
+  
+  # Clearing the url_lsit
+  url_list<-data.frame(URL=as.character())
+  
+  # Pulling the information for specified URL
+  d<-read_html(urlByLocation(Location_Codes[j])) %>% 
+    html_nodes(xpath='//*[@id="JobSearch"]') %>%
+    html_text()
+  
+  print(paste("----Step 2 for location ", Location_Codes[j], "(",j,")")) #*******************************************************
+  
+  # Pulling back all specific posting urls
+  dt<-data.frame(str_extract_all(d, 'https://.*'))
+  colnames(dt)<-c("URL")
+  url_list<-rbind(url_list,dt)
+  
+  print(paste("----Step 3 for location ", Location_Codes[j], "(",j,")")) #*******************************************************
+  
+  # Defining the URL field
+  url_list$URL<-as.character(url_list$URL)
+  url_list$URL<-substr(url_list$URL,1,nchar(url_list$URL)-1)
+  
+  print(paste("----Step 4 for location ", Location_Codes[j], "(",j,")")) #*******************************************************
+  
+  # Pulling the job description
+  url_list$Description<-NA
+  
+  print(paste("----Step 5 for location ", Location_Codes[j], "(",j,")")) #*******************************************************
+  
+  for(i in 1:nrow(url_list)){
+    tryCatch({
+      link <- as.character(url_list$URL[i])
+      web<-read_html(link)
+      url_list$Description[i] <- web %>% html_node(".desc") %>% html_text()
+    }, error=function(e){})
+  }
+  
+  print(paste("----Step 6 for location ", Location_Codes[j], "(",j,")")) #*******************************************************
+  
+  # Pulling the job title
+  url_list$Job_Title<-NA
+  
+  for(i in 1:nrow(url_list)){
+    tryCatch({
+      link <- as.character(url_list$URL[i])
+      web<-read_html(link)
+      url_list$Job_Title[i] <- web %>% html_nodes(xpath='//*[@id="HeroHeaderModule"]/div[3]/div[1]/div[2]/div[1]/h2') %>% html_text()
+    }, error=function(e){})
+  }
+  
+  print(paste("----Step 7 for location ", Location_Codes[j], "(",j,")")) #*******************************************************
+  
+  # Pulling the company rating
+  url_list$Company_Rating<-NA
+  
+  for(i in 1:nrow(url_list)){
+    tryCatch({
+      link <- as.character(url_list$URL[i])
+      web<-read_html(link)
+      url_list$Company_Rating[i] <- web %>% html_nodes(xpath='//*[@id="HeroHeaderModule"]/div[3]/div[1]/div[2]/span[1]') %>% html_text()
+    }, error=function(e){})
+  }
+  ## Note: If the rating isn't populated then the company name will appear here
+  
+  print(paste("----Step 8 for location ", Location_Codes[j], "(",j,")")) #*******************************************************
+  
+  # Pulling the company name
+  url_list$Company_Name<-NA
+  
+  for(i in 1:nrow(url_list)){
+    tryCatch({
+      link <- as.character(url_list$URL[i])
+      web<-read_html(link)
+      url_list$Company_Name[i] <- web %>% html_nodes(xpath='//*[@id="HeroHeaderModule"]/div[3]/div[1]/div[2]/span[2]') %>% html_text()
+    }, error=function(e){})
+  }
+  ## Note: If the rating isn't populated then the company location will appear here
+  
+  print(paste("----Step 9 for location ", Location_Codes[j], "(",j,")")) #*******************************************************
+  
+  # Pulling the company location
+  url_list$Company_Location<-NA
+  
+  for(i in 1:nrow(url_list)){
+    tryCatch({
+      link <- as.character(url_list$URL[i])
+      web<-read_html(link)
+      url_list$Company_Location[i] <- web %>% html_nodes(xpath='//*[@id="HeroHeaderModule"]/div[3]/div[1]/div[2]/span[3]') %>% html_text()
+    }, error=function(e){})
+  }
+  ## Note: If the rating isn't populated then the company location will appear BLANK here
+  
+  print(paste("----Step 10 for location ", Location_Codes[j], "(",j,")")) #*******************************************************
+  
+  # Pulling the company location
+  url_list$Estimated_Salary<-NA
+  
+  for(i in 1:nrow(url_list)){
+    tryCatch({
+      link <- as.character(url_list$URL[i])
+      web<-read_html(link)
+      url_list$Estimated_Salary[i] <- web %>% html_nodes(xpath='//*[@id="salWrap"]/h2') %>% html_text()
+    }, error=function(e){})
+  }
+  ## Note: If the rating isn't populated then the company location will appear BLANK here
+  
+  #########################################################
+  ### Making Adjustments for Where Rating Not Populated ###
+  #########################################################
+  #library(tidyverse)
+  
+  print(paste("----Step 11 for location ", Location_Codes[j], "(",j,")")) #*******************************************************
+  
+  url_list <- url_list %>% 
+    mutate(
+      Company_Location = case_when(nchar(Company_Rating) > 4 ~ Company_Name, TRUE ~ Company_Location),
+      Company_Name = case_when(nchar(Company_Rating) > 4 ~ Company_Rating, TRUE ~ Company_Name)
+    ) %>% 
+    mutate(Company_Rating = case_when(nchar(Company_Rating) > 4 ~ "NA", TRUE ~ Company_Rating))
+  
+  print(paste("----Step 12 for location ", Location_Codes[j], "(",j,")")) #*******************************************************
+  
+  url_list$Location_Code<-Location_Codes[j]
+  
+  DSdata <- rbind(DSdata,url_list)
+  rm(url_list)
+}
+
+########################
+### END WEB-SCRAPING ###
+########################
 
 # Read in the scraped data
 DSdata <- read.csv("https://raw.githubusercontent.com/JonWayland/Opening-Glassdoor/master/DSdata.csv")
@@ -309,43 +476,14 @@ data %>%
   theme_bw()
 
 
-########################
-### Predictive Model ###
-########################
-
-# Setting up the formula for prediction
-salaryFormula <- formula(Estimated_Salary ~ Company_Rating + MS + PHD + Python + R + Scala + SAS + TensorFlow + Matlab + MachineLearning + NeuralNetwork + StatisticalProgramming +
-                           DeepLearning + EntryLevel + Sr_Title + Jr_Title + Intern + Consultant + Analyst + Scientist + Statistics_Mathematics +
-                           ComputerScience + City + DataManagement)
+######################
+### Splitting Data ###
+######################
 
 # Setting aside the data without estimated salaries to predict at the end
 forPrediction <- data %>% filter(is.na(Estimated_Salary))
 data <- data %>% filter(!is.na(Estimated_Salary))
 
-# Mean Salary Estimate
-meanSal<-mean(data$Estimated_Salary)
-
-# Distribution of salaries by city
-data %>%
-  mutate(City = reorder(City, Estimated_Salary)) %>%
-  ggplot(aes(x = City, y = Estimated_Salary)) +
-  geom_boxplot(color="darkgreen", fill = "lightgreen")+
-  geom_hline(yintercept = meanSal, lty = 2, col = "black", size = 1)+
-  ggtitle("Glassdoor\nData Scientist Salary Estimates by City")+
-  scale_y_continuous(name = "Salary Estimate", label = scales::dollar)+
-  theme_bw()+
-  theme(plot.title = element_text(hjust = 0.5),
-        axis.text.x = element_text(angle = 65, hjust = 1))
-
-
-
-# Re-level city variable as Denver (middle of the pack)
-data$City <- relevel(data$City, ref="Denver")
-
-
-######################
-### Splitting Data ###
-######################
 library(caret)
 set.seed(7)
 test_index <- createDataPartition(data$Estimated_Salary, times = 1, p = 0.1, list = FALSE)
@@ -362,6 +500,34 @@ train %>%
   scale_x_continuous(name = "Estimated Salary", label = dollar)
 
 
+########################
+### Predictive Model ###
+########################
+summary(train)
+
+# Setting up the formula for prediction - Choosing binary fields w/ at least a 10% prevalence
+salaryFormula <- formula(Estimated_Salary ~ Company_Rating + PHD + MS + Python + ComputerScience + 
+                           Statistics_Mathematics + Scientist + Analyst + R + Scala + SAS + MachineLearning)
+
+# Mean Salary Estimate
+meanSal<-mean(train$Estimated_Salary)
+
+# Distribution of salaries by city
+train %>%
+  mutate(City = reorder(City, Estimated_Salary)) %>%
+  ggplot(aes(x = City, y = Estimated_Salary)) +
+  geom_boxplot(color="darkgreen", fill = "lightgreen")+
+  geom_hline(yintercept = meanSal, lty = 2, col = "black", size = 1)+
+  ggtitle("Glassdoor\nData Scientist Salary Estimates by City")+
+  scale_y_continuous(name = "Salary Estimate", label = scales::dollar)+
+  theme_bw()+
+  theme(plot.title = element_text(hjust = 0.5),
+        axis.text.x = element_text(angle = 65, hjust = 1))
+
+# Re-level city variable as Baltimore (middle of the pack)
+train$City <- relevel(train$City, ref="Baltimore")
+test$City <- relevel(test$City, ref="Baltimore")
+
 ############################################
 ### Baseline Model and Linear Regression ###
 ############################################
@@ -376,16 +542,20 @@ results <- rbind(results,
                  data.frame(Model = "Linear Regression",
                             RMSE = RMSE(test$Estimated_Salary, predict(fit, newdata = test))))
 
+results %>% knitr::kable()
+
 
 ###########################################################
 ### Experimenting with Machine Learning Models in caret ###
 ###########################################################
 # Checking a few models for their un-tuned performance
-seed <- 7
+seed <- 1
 
-# 10-Fold Cross-Validation
-control<- trainControl(method="cv", 
-                       number=10)
+# 10-Fold Cross-Validation (repeated 3 times)
+control<- trainControl(method="repeatedcv", 
+                       number=10,
+                       repeats = 3,
+                       returnResamp = "all")
 
 ########
 # CART #
@@ -421,28 +591,6 @@ fit.gbm <- train(salaryFormula,
                  verbose = FALSE)
 
 
-#############################
-# Bayesian Ridge Regression #
-#############################
-set.seed(seed)
-fit.bridge <- train(salaryFormula, 
-                 data=train, 
-                 method="bridge", 
-                 metric="RMSE",
-                 trControl=control,
-                 verbose = FALSE)
-
-##########################
-# Least Angle Regression #
-##########################
-set.seed(seed)
-fit.lars <- train(salaryFormula, 
-                    data=train, 
-                    method="lars2", 
-                    metric="RMSE",
-                    trControl=control,
-                    verbose = FALSE)
-
 ############################################
 # Linear Regression with Forward Selection #
 ############################################
@@ -465,75 +613,29 @@ fit.ridge <- train(salaryFormula,
                   trControl=control,
                   verbose = FALSE)
 
-##################
-# Neural Network #
-##################
-set.seed(seed)
-fit.nn <- train(salaryFormula, 
-                  data=train, 
-                  method="neuralnet", 
-                  metric="RMSE",
-                  trControl=control,
-                  verbose = FALSE)
-
-
-
-
-
-
-# Comparisons
+# Comparisons of models
 performance_grid <- resamples(list(
   cart=fit.cart, 
   rf=fit.rf, 
   gbm=fit.gbm,
-  bridge = fit.bridge,
-  lars = fit.lars,
   leap = fit.leap,
-  ridge = fit.ridge,
-  nn = fit.nn
+  ridge = fit.ridge
 ))
 
 performance_grid %>% knitr::kable()
 
-
 results <- rbind(results, data.frame(
-  Model = c("Decision Tree", "Random Forest", "Gradient Boosting"),
+  Model = c("Decision Tree", "Random Forest", "Gradient Boosting", "Forward Selection", "Ridge"),
   RMSE = c(RMSE(test$Estimated_Salary,predict(fit.cart, newdata = test)), 
            RMSE(test$Estimated_Salary,predict(fit.rf, newdata = test)),
-           RMSE(test$Estimated_Salary,predict(fit.gbm, newdata = test)))
+           RMSE(test$Estimated_Salary,predict(fit.gbm, newdata = test)),
+           RMSE(test$Estimated_Salary,predict(fit.leap, newdata = test)),
+           RMSE(test$Estimated_Salary,predict(fit.ridge, newdata = test)))
 ))
 
 results %>% knitr::kable()
 
-# GBM has the best RMSE, but still worse than our linear regression model
-
-
-# Optimizing the gbm model's hyperparameter choices
-gbmGrid <-  expand.grid(interaction.depth = seq(2,9,1), 
-                        n.trees = (1:30)*50, 
-                        shrinkage = 0.05,
-                        n.minobsinnode = 10)
-
-set.seed(seed)
-gbmFit <- train(salaryFormula, 
-                data=train, 
-                method="gbm", 
-                metric="RMSE",
-                trControl=control,
-                verbose = FALSE,
-                tuneGrid = gbmGrid)
-
-plot(gbmFit)
-
-results <- rbind(results, data.frame(
-  Model = c("Optimized Gradient Boosting"),
-  RMSE = RMSE(test$Estimated_Salary,predict(gbmFit, newdata = test)
-  )))
-
-# Seeing the final results
-results %>% knitr::kable()
-
-# Linear model still wins
+# Gradient Boosting and Random Forest seem to have a slight edge over the linear model, but because of the simplicity of the linear model I want to move forward with that
 
 #################################################
 ### Making Final Predictions on Hold-Out Data ###
@@ -541,11 +643,15 @@ results %>% knitr::kable()
 
 # Re-fitting on the full dataset
 fit<-lm(salaryFormula, data = data)
+summary(fit)
+
+# Re-fit w/ significant variables
+fit2 <- lm(Estimated_Salary ~ Company_Rating+Python+ComputerScience+Scientist+Analyst+R+MachineLearning, data = data)
 
 # Removing instances where Tucson is in the data as there are no reported salaries for these postings to learn from
 forPrediction <- forPrediction %>% filter(City != 'Tucson')
 
-forPrediction$SalaryEstimate <- predict(fit, newdata = forPrediction)
+forPrediction$SalaryEstimate <- predict(fit2, newdata = forPrediction)
 
 forPrediction %>% 
   select(Company_Name, Company_Rating, City, Title_Upper, SalaryEstimate) %>%
@@ -553,34 +659,25 @@ forPrediction %>%
   head(5) %>%
   knitr::kable()
 
+# |Company_Name      | Company_Rating|City         |Title_Upper           | SalaryEstimate|
+# |:-----------------|--------------:|:------------|:---------------------|--------------:|
+# |Guru Technologies |            5.0|Philadelphia |DATA SCIENTIST        |       132322.7|
+# |Infinia ML        |            5.0|Raleigh      |DATA SCIENTIST        |       132322.7|
+# |Fama (CA)         |            5.0|Los Angeles  |JUNIOR DATA SCIENTIST |       132322.7|
+# |HireNetworks      |            4.9|Raleigh      |DATA SCIENTIST        |       131562.2|
+# |First Horizon     |            4.5|Memphis      |DATA SCIENTIST        |       128520.6|
+
 forPrediction %>% 
   select(Company_Name, Company_Rating, City, Title_Upper, SalaryEstimate) %>%
   arrange(SalaryEstimate) %>% 
   head(5) %>%
   knitr::kable()
 
-###########################
-### Additional Analysis ###
-###########################
+# |Company_Name              | Company_Rating|City      |Title_Upper                 | SalaryEstimate|
+# |:-------------------------|--------------:|:---------|:---------------------------|--------------:|
+# |Saint Thomas Hospital     |            1.0|Nashville |DATA ANALYST   SQL          |       39332.00|
+# |CereCore                  |            2.0|Nashville |DATA ANALYST                |       46936.20|
+# |Evergreen Health Services |            2.7|Buffalo   |DATA ANALYST                |       52259.14|
+# |Vera Whole Health         |            3.1|Seattle   |DATA ANALYST I              |       55300.82|
+# |NA                        |            3.1|Memphis   |QUALITY DATA ANALYST BREAST |       55300.82|
 
-# Linear Model
-fit <- lm(salaryFormula, data = data)
-
-summary(fit)
-
-
-
-df <- data %>% filter(!is.na(Estimated_Salary))
-
-df$Pred <- predict(fit,newdata=df)
-
-df %>% 
-  mutate(MachineLearning = case_when(MachineLearning == 1 ~ "Yes", TRUE ~ "No")) %>%
-  mutate(`Machine Learning` = as.factor(MachineLearning)) %>%
-  ggplot(aes(Estimated_Salary, Pred, color = `Machine Learning`))+
-  geom_point(size=2) +
-  xlab("Glassdoor Estimated Salary")+
-  ylab("Linear Model Estimate")+
-  ggtitle("Is Machine Learning Mentioned in the Job Description?")+
-  theme_bw()+
-  theme(plot.title = element_text(hjust = 0.5))
